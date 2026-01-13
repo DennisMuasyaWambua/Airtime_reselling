@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: airtime_postgres_prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-airtime_db}
+      - POSTGRES_USER=${POSTGRES_USER:-airtime_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-this-password}
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airtime_user} -d ${POSTGRES_DB:-airtime_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airtime_network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airtime_api_prod
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn airtime_api.wsgi:application
+             --bind 0.0.0.0:8000
+             --workers 4
+             --threads 2
+             --timeout 60
+             --access-logfile -
+             --error-logfile -
+             --log-level info"
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_PROD_URL=postgresql://${POSTGRES_USER:-airtime_user}:${POSTGRES_PASSWORD:-change-this-password}@db:5432/${POSTGRES_DB:-airtime_db}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    networks:
+      - airtime_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: airtime_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles:/app/staticfiles:ro
+      - media:/app/media:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - web
+    restart: always
+    networks:
+      - airtime_network
+
+  # Optional: Certbot for SSL certificates
+  certbot:
+    image: certbot/certbot
+    container_name: airtime_certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - airtime_network
+
+volumes:
+  postgres_data:
+  staticfiles:
+  media:
+
+networks:
+  airtime_network:
+    driver: bridge

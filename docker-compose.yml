@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: airtime_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=airtime_db
+      - POSTGRES_USER=airtime_user
+      - POSTGRES_PASSWORD=airtime_password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airtime_user -d airtime_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airtime_network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: airtime_api
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn airtime_api.wsgi:application
+             --bind 0.0.0.0:8000
+             --workers 4
+             --threads 2
+             --timeout 60
+             --access-logfile -
+             --error-logfile -
+             --log-level info"
+    volumes:
+      - ./staticfiles:/app/staticfiles
+      - ./media:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_PROD_URL=postgresql://airtime_user:airtime_password@db:5432/airtime_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - airtime_network
+
+volumes:
+  postgres_data:
+
+networks:
+  airtime_network:
+    driver: bridge
