@@ -1,8 +1,14 @@
 from rest_framework import serializers
 from .models import Transaction, CustomerSession
 
+class AirtimeTopUpRequestSerializer(serializers.Serializer):
+    """Serializer for incoming airtime top-up requests (client input)"""
+    recipient_phone_number = serializers.CharField(max_length=15)
+    amount = serializers.IntegerField(min_value=1)
+    session = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+
 class CustomerSerializer(serializers.ModelSerializer):
-    class Meta: 
+    class Meta:
         model = Transaction
         fields=['recipient_phone_number','session','amount', 'status']
 

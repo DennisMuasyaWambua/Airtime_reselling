@@ -4,7 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from airtime.mpesa import Mpesa
-from .serializers import CustomerSerializer,CustomerSessionSerializer
+from .serializers import CustomerSerializer, CustomerSessionSerializer, AirtimeTopUpRequestSerializer
+from .models import CustomerSession
 import logging
 # Create your views here.
 logger = logging.getLogger(__name__)
@@ -19,31 +20,46 @@ class AirtimeTopUpView(APIView):
     def post(self, request):
         # Logic for handling airtime top-up requests
         self.mpesa.get_access_token()
-        serializer_class = self.serializer_class(data=request.data)
-        if serializer_class.is_valid():
-            customer_number = serializer_class.validated_data['recipient_phone_number']
-            amount = serializer_class.validated_data['amount']
-            status ="FAILED"
-            # initate airtime top-up
+
+        # Use the new request serializer for validation
+        request_serializer = AirtimeTopUpRequestSerializer(data=request.data)
+        if request_serializer.is_valid():
+            customer_number = request_serializer.validated_data['recipient_phone_number']
+            amount = request_serializer.validated_data['amount']
+            session_key = request_serializer.validated_data.get('session')
+
+            # Get or validate session
+            session_obj = None
+            if session_key:
+                try:
+                    session_obj = CustomerSession.objects.get(session_key=session_key)
+                except CustomerSession.DoesNotExist:
+                    logger.warning(f"Invalid session key provided: {session_key}")
+                    # Continue without session
+
+            # Initiate airtime top-up
             top_up = self.mpesa.airtime_top_up(customer_number, amount)
             logger.info(f"Airtime top-up response: {top_up}")
-            logger.info(f"SESSION KEY: {request.data.get('session')}")
+            logger.info(f"SESSION KEY: {session_key}")
             logger.info(f"Request data: {request.data}")
-            status ="FAILED"
+
             if top_up.get('responseStatus') == '200':
-                #save transaction to db here
-                serializer_class = self.serializer_class(data={
+                # Save transaction to db here
+                transaction_data = {
                     'recipient_phone_number': customer_number,
-                    'session': request.data.get('session'),
                     'amount': amount,
                     'status': 'COMPLETED'
-                })
-                if serializer_class.is_valid():
-                    serializer_class.save()
+                }
+                if session_obj:
+                    transaction_data['session'] = session_obj.id
+
+                transaction_serializer = self.serializer_class(data=transaction_data)
+                if transaction_serializer.is_valid():
+                    transaction_serializer.save()
                     return Response({"message":"Airtime top-up successful","safaricom_response":f"{top_up}"}, status=200)
                 else:
-                    logger.error(f"Transaction serializer errors: {serializer_class.errors}")
-                    return Response(serializer_class.errors, status=500)
+                    logger.error(f"Transaction serializer errors: {transaction_serializer.errors}")
+                    return Response(transaction_serializer.errors, status=500)
             else:
                 # Handle failed top-up
                 logger.error(f"Airtime top-up failed: {top_up}")
@@ -52,7 +68,7 @@ class AirtimeTopUpView(APIView):
                     "safaricom_response": top_up
                 }, status=400)
         else:
-            return Response(serializer_class.errors, status=400)
+            return Response(request_serializer.errors, status=400)
         
         # self.mpesa.airtime_top_up("712345678", 1000)
     def get(self, request):
@@ -74,7 +90,13 @@ class AirtimeTopUpView(APIView):
        })
        if session_serializer.is_valid():
            session_serializer.save()
+           return Response({
+               "message": "Airtime Top-up Service is running",
+               "session_key": session_key
+           }, status=status.HTTP_200_OK)
        else:
            logger.error(f"Session serializer errors: {session_serializer.errors}")
-
-       return Response("Airtime Top-up Service is running", status=status.HTTP_200_OK)
+           return Response({
+               "message": "Failed to create session",
+               "errors": session_serializer.errors
+           }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
