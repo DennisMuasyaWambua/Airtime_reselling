@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-1$z@dx-*6=6r1iuff2=soou!q#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS=["airtimereselling-production.up.railway.app"]
+ALLOWED_HOSTS=["airtimereselling-production.up.railway.app","localhost:3000"]
 
 
 # Application definition
