@@ -19,7 +19,16 @@ class AirtimeTopUpView(APIView):
     session = None
     def post(self, request):
         # Logic for handling airtime top-up requests
-        self.mpesa.get_access_token()
+        access_token = self.mpesa.get_access_token()
+
+        if not access_token:
+            logger.error("Failed to retrieve access token from Safaricom")
+            return Response({
+                "message": "Failed to authenticate with Safaricom API",
+                "error": "Could not retrieve access token"
+            }, status=500)
+
+        logger.info("Access token retrieved successfully")
 
         # Use the new request serializer for validation
         request_serializer = AirtimeTopUpRequestSerializer(data=request.data)
@@ -42,6 +51,15 @@ class AirtimeTopUpView(APIView):
             logger.info(f"Airtime top-up response: {top_up}")
             logger.info(f"SESSION KEY: {session_key}")
             logger.info(f"Request data: {request.data}")
+
+            # Check if there was an error in the response
+            if top_up.get('error'):
+                logger.error(f"Airtime top-up error: {top_up}")
+                return Response({
+                    "message": "Airtime top-up failed",
+                    "error": top_up.get('details', 'Unknown error'),
+                    "status_code": top_up.get('status_code')
+                }, status=top_up.get('status_code', 400))
 
             if top_up.get('responseStatus') == '200':
                 # Save transaction to db here
