@@ -17,6 +17,7 @@ class AirtimeTopUpView(APIView):
     serializer_class = CustomerSerializer 
     session_serializer_class = CustomerSessionSerializer
     session = None
+    print(str(session_serializer_class))
     def post(self, request):
         # Logic for handling airtime top-up requests
         access_token = self.mpesa.get_access_token()

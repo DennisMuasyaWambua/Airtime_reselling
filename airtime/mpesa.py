@@ -17,6 +17,7 @@ class Mpesa:
     def get_access_token(self):
         """Worked after changing the keys"""
         auth_url = daraja_endpoints['access_token']
+        print("Auth URL:", auth_url)
         
         auth_header = base64.b64encode(f"{self.consumer_key}:{self.consumer_secret}".encode()).decode()
         print("Auth Header:",auth_header)
@@ -36,7 +37,7 @@ class Mpesa:
             return self.access_token
 
         except requests.exceptions.RequestException as e:
-            print("Error during request:", e)
+            print("Error during request:*************************", e)
             return None
 
     def airtime_top_up( self, customer_number, amount):
