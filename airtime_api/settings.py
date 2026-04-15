@@ -95,12 +95,26 @@ REST_FRAMEWORK = {
 
 if os.getenv("ENVIRONMENT") == "production":
     DATABASES = {
-        'default': dj_database_url.parse(os.getenv("DATABASE_PROD_URL"))
+        'default': dj_database_url.config(
+            default=os.getenv("DATABASE_PROD_URL"),
+            conn_max_age=600,  # Keep connections alive for 10 minutes
+            conn_health_checks=True,  # Enable connection health checks
+            ssl_require=True
+        )
     }
 else:
     DATABASES = {
         'default': dj_database_url.parse(os.getenv("DATABASE_LOCAL_URL"))
     }
+
+# Add connection pooling options for production
+if os.getenv("ENVIRONMENT") == "production":
+    DATABASES['default']['OPTIONS'] = {
+        'connect_timeout': 10,
+        'options': '-c statement_timeout=30000'  # 30 second query timeout
+    }
+    # Limit connection pool
+    DATABASES['default']['CONN_MAX_AGE'] = 600
 
 # DATABASES = {
 #     'default': {
