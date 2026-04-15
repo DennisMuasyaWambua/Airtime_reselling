@@ -1,5 +1,5 @@
 import os, requests,json,base64
-from airtime.constants import DARAJA_ENDPOINTS as daraja_endpoints
+from constants import DARAJA_ENDPOINTS as daraja_endpoints
 
 class Mpesa:
     def __init__(self):
