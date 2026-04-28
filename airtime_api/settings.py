@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-1$z@dx-*6=6r1iuff2=soou!q#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS=["airtimereselling-production.up.railway.app","localhost:3000"]
+ALLOWED_HOSTS = ["airtimereselling-production.up.railway.app", "localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -61,6 +61,8 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://airtimereselling-production.up.railway.app",
+    'http://localhost', 
+    'http://127.0.0.1',
 ]
 
 ROOT_URLCONF = 'airtime_api.urls'

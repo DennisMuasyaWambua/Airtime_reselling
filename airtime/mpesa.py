@@ -15,20 +15,16 @@ class Mpesa:
         print("Dealer PIN present:", bool(self.dealer_pin))
 
     def get_access_token(self):
-        """Worked after changing the keys"""
         auth_url = daraja_endpoints['access_token']
-        print("Auth URL:", auth_url)
-        
+        print("this is the auth url: ", auth_url)
         auth_header = base64.b64encode(f"{self.consumer_key}:{self.consumer_secret}".encode()).decode()
-        print("Auth Header:",auth_header)
         headers = {
             "Authorization": f"Basic {auth_header}"
         }
-        params = {
-            "grant_type": "client_credentials"
-        }
         try:
-            response = requests.get(auth_url, headers=headers, params=params)
+            response = requests.post(auth_url, headers=headers)
+            print("Status code:", response.status_code)
+            print("Response body:", response.text)  # <-- add this
             response.raise_for_status()
             data = response.json()
             token = data.get('access_token')
