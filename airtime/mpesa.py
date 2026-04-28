@@ -8,6 +8,7 @@ class Mpesa:
         self.dealer_number = os.environ.get('DEALERNUMBER')
         self.dealer_pin = os.environ.get('DEALERPIN')
         self.access_token = None
+        print("DEALER PIN:", self.dealer_pin)
 
         print("Consumer Key present:", bool(self.consumer_key))
         print("Consumer Secret present:", bool(self.consumer_secret))
