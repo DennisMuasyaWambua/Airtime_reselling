@@ -61,6 +61,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://airtimereselling-production.up.railway.app",
+    "https://airtime-reselling-frontend.vercel.app/",
     'http://localhost', 
     'http://127.0.0.1',
 ]
